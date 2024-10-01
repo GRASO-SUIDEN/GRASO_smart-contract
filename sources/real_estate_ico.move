@@ -38,30 +38,27 @@ module sui_den::real_estate_ico{
 
     }
 
+    public struct UserContactInfo has key, store {
+        id: UID,
+        phone_number: String,
+        website: String,
+    }
+
     // Struct to manage all user profiles 
     public struct UserProfileManager has key {
         id: UID,
         profiles: Table<address, UserProfile>,
     }
 
-    // PropertyICO struct 
-    // public struct PropertyICO  has key {
-    //     id: UID,
-    //     name: String,
-    //     description: String,
-    //     total_value: u64,
-    //     total_contributors: u64,
-    //     start_time: u64,
-    //     end_time: u64,
-    //     balance: Balance<SUI>,
-    //     contributions: Table<address, u64>,
-    //     developer: address,
-    //     is_fractional: bool,
-    // }
+    public struct UserContactInfoManager has key {
+        id: UID,
+        contacts: Table<address, UserContactInfo>,
+    }
+   
     public struct PropertyICO has key {
     id: UID,
-        name: String,
-        description: String,
+    name: String,
+    description: String,
     developer: address,
     balance: Balance<SUI>,
     total_value: u64,
@@ -89,6 +86,11 @@ module sui_den::real_estate_ico{
     public struct ProfileCreated has copy, drop {
         user: address,
         name: String,
+    }
+
+    public struct ContactAdded has copy, drop {
+        phone_number: String,
+        website: String,
     }
 
     public struct ICOCreated has copy, drop {
@@ -120,9 +122,12 @@ module sui_den::real_estate_ico{
     // Initialize the UserProfileManager
     fun init (ctx: &mut TxContext){
         transfer::share_object(UserProfileManager { id: object::new(ctx), profiles: table::new(ctx) });
+        transfer::share_object(UserContactInfoManager { id: object::new(ctx), contacts: table::new(ctx) });
         transfer::share_object(ICORegistry {id: object::new(ctx),icos: vec_set::empty(),});
     }
 
+
+ 
 
     public entry fun create_profile(
         manager: &mut UserProfileManager,
@@ -156,6 +161,23 @@ module sui_den::real_estate_ico{
         
     }
 
+   public entry fun add_contact (
+        manager: &mut UserContactInfoManager,
+        phone_number: String,
+        website: String,
+        ctx: &mut TxContext
+    ){
+        let sender = tx_context::sender(ctx);
+        let contact = UserContactInfo {
+            id: object::new(ctx),
+            phone_number,
+            website,
+        };
+
+        event::emit(ContactAdded { phone_number: contact.phone_number, website: contact.website });
+
+        table::add(&mut manager.contacts, sender, contact);
+    }
 
     public entry fun create_ico(
         manager: &mut UserProfileManager,
