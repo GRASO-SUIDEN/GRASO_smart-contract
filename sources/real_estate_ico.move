@@ -57,17 +57,20 @@ module sui_den::real_estate_ico{
    
     public struct PropertyICO has key {
     id: UID,
-    name: String,
-    description: String,
+    title: String,
+    image: String,
+    property_type: String,
     developer: address,
     balance: Balance<SUI>,
     total_value: u64,
     total_contributors: u64,
     contributions: Table<address, u64>,
-    contributors: vector<address>,  // Add this field
+    contributors: vector<address>,  
     end_time: u64,
     start_time: u64,
-        is_fractional: bool,
+    is_fractional: bool,
+    description: String,
+    location: String,
 
 }
     public struct ICORegistry has key {
@@ -182,12 +185,15 @@ module sui_den::real_estate_ico{
     public entry fun create_ico(
         manager: &mut UserProfileManager,
         registry: &mut ICORegistry,
-        name: vector<u8>,
-        description: vector<u8>,
+        title: String,
+        image: String,
+        property_type: String,
         total_value: u64,
         start_time: u64,
         end_time: u64,
         is_fractional: bool,
+        description: String,
+        location: String,
         ctx: &mut TxContext
 
     ){
@@ -196,10 +202,13 @@ module sui_den::real_estate_ico{
         
         assert!(userProfile.is_developer == true, ENotDeveloper);
 
+
+
         let ico = PropertyICO {
             id: object::new(ctx),
-            name: utf8(name),
-            description: utf8(description),
+            title,
+            image,
+            property_type,
             total_value,
             total_contributors: 0,
             contributions: table::new(ctx),
@@ -208,7 +217,9 @@ module sui_den::real_estate_ico{
             contributors: vector::empty(),
             balance: balance::zero(),
             developer: sender,
-            is_fractional
+            is_fractional,
+            description,
+            location,
         };
 
         let ico_id = object::id(&ico);
@@ -216,7 +227,7 @@ module sui_den::real_estate_ico{
 
         event::emit(ICOCreated {
             ico_id: object::id(&ico),
-            name: ico.name,
+            name: ico.title,
             total_value,
         });
 
@@ -258,7 +269,7 @@ module sui_den::real_estate_ico{
          // Create and transfer NFT
         let nft = PropertyNFT {
             id: object::new(ctx),
-            name: ico.name,
+            name: ico.title,
             contribution_amount: amount,
             ico_id: object::id(ico),
         };
@@ -295,7 +306,7 @@ module sui_den::real_estate_ico{
         // Create and transfer NFT
         let nft = PropertyNFT {
             id: object::new(ctx),
-            name: ico.name,
+            name: ico.title,
             contribution_amount: ico.total_value,
             ico_id: object::id(ico),
         };
@@ -397,14 +408,13 @@ public entry fun buy_property(ico: &mut PropertyICO, payment: &mut Coin<SUI>, cl
         (investor_share as u64) + contribution
 
     }
-    public fun get_ico_info(ico: &PropertyICO): (String, u64, u64, u64, u64, bool){
+    public fun get_ico_info(ico: &PropertyICO): (String, String, String, String, u64){
         (
-            ico.name,
+            ico.title,
+            ico.image,
+            ico.location,
+            ico.description,
             ico.total_value,
-            ico.total_contributors,
-            ico.start_time,
-            ico.end_time,
-            ico.is_fractional
 
         )
     }
