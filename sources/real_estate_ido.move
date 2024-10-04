@@ -1,24 +1,20 @@
-module sui_den::real_estate_ico{
-    use sui::object::{Self, UID};
-    use sui::transfer;
-    use sui::tx_context::{Self, TxContext};
+module sui_den::real_estate_ido{
     use sui::table::{Self, Table};
-    use std::string::{String, utf8};
+    use std::string::{String};
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
     use sui::balance::{Self, Balance};
     use sui::clock::{Self, Clock};
     use sui::event;
     use sui::vec_set::{Self, VecSet};
-    use std::vector;
 
     // Error codes 
     const EInsufficientFunds: u64 = 0;
-    const EICONotActive: u64 = 1;
-    const EICOExpired: u64 = 2;
+    const EIDONotActive: u64 = 1;
+    const EIDOExpired: u64 = 2;
     const EAlreadySold: u64 = 3;
     const ENotAuthorized: u64 = 4;
-    const EICONotCompleted: u64 = 5;
+    const EIDONotCompleted: u64 = 5;
     const ENotDeveloper: u64 = 6;
     const EFractionalNotAllowed: u64 = 7;
     const EAlreadyOwner: u64= 8;
@@ -55,7 +51,7 @@ module sui_den::real_estate_ico{
         contacts: Table<address, UserContactInfo>,
     }
    
-    public struct PropertyICO has key {
+    public struct PropertyIDO has key {
     id: UID,
     title: String,
     image: String,
@@ -73,16 +69,16 @@ module sui_den::real_estate_ico{
     location: String,
 
 }
-    public struct ICORegistry has key {
+    public struct IDORegistry has key {
         id: UID,
-        icos: VecSet<ID>
+        idos: VecSet<ID>
     }
     
     public struct PropertyNFT has key, store {
         id: UID,
         name: String,
         contribution_amount: u64,
-        ico_id: ID,
+        ido_id: ID,
     }
 
     // Event emitted when a new profile is created
@@ -97,24 +93,24 @@ module sui_den::real_estate_ico{
     }
 
     public struct ICOCreated has copy, drop {
-        ico_id: ID,
+        ido_id: ID,
         name: String,
         total_value: u64,
     }
 
     public struct Contributed has copy, drop {
-        ico_id: ID,
+        ido_id: ID,
         contributor: address,
         amount: u64,
     }
 
-    public struct ICOComplted has copy, drop {
-        ico_id: ID,
+    public struct IDOComplted has copy, drop {
+        ido_id: ID,
         total_raised: u64,
         total_contributors: u64,
     }
     public struct PropertySold has copy, drop {
-    ico_id: ID,
+    ido_id: ID,
     old_owner: address,
     new_owner: address,
     sale_price: u64,
@@ -126,7 +122,7 @@ module sui_den::real_estate_ico{
     fun init (ctx: &mut TxContext){
         transfer::share_object(UserProfileManager { id: object::new(ctx), profiles: table::new(ctx) });
         transfer::share_object(UserContactInfoManager { id: object::new(ctx), contacts: table::new(ctx) });
-        transfer::share_object(ICORegistry {id: object::new(ctx),icos: vec_set::empty(),});
+        transfer::share_object(IDORegistry {id: object::new(ctx),idos: vec_set::empty(),});
     }
 
 
@@ -182,9 +178,9 @@ module sui_den::real_estate_ico{
         table::add(&mut manager.contacts, sender, contact);
     }
 
-    public entry fun create_ico(
+    public entry fun create_ido(
         manager: &mut UserProfileManager,
-        registry: &mut ICORegistry,
+        registry: &mut IDORegistry,
         title: String,
         image: String,
         property_type: String,
@@ -204,7 +200,7 @@ module sui_den::real_estate_ico{
 
 
 
-        let ico = PropertyICO {
+        let ido = PropertyIDO {
             id: object::new(ctx),
             title,
             image,
@@ -222,46 +218,46 @@ module sui_den::real_estate_ico{
             location,
         };
 
-        let ico_id = object::id(&ico);
+        let ido_id = object::id(&ido);
 
 
         event::emit(ICOCreated {
-            ico_id: object::id(&ico),
-            name: ico.title,
+            ido_id: object::id(&ido),
+            name: ido.title,
             total_value,
         });
 
-        vec_set::insert(&mut registry.icos, ico_id);
-        transfer::share_object(ico);
+        vec_set::insert(&mut registry.idos, ido_id);
+        transfer::share_object(ido);
     }
 
-    public entry fun contribute(ico: &mut PropertyICO, payment: &mut Coin<SUI>, mut amount: u64, clock: &Clock, ctx: &mut TxContext){
-        assert!(ico.is_fractional, EFractionalNotAllowed);
+    public entry fun contribute(ido: &mut PropertyIDO, payment: &mut Coin<SUI>, mut amount: u64, clock: &Clock, ctx: &mut TxContext){
+        assert!(ido.is_fractional, EFractionalNotAllowed);
         let sender = tx_context::sender(ctx);
         let current_time = clock::timestamp_ms(clock);
 
-        assert!(current_time >= ico.start_time, EICONotActive);
-        assert!(current_time <= ico.end_time, EICOExpired);
+        assert!(current_time >= ido.start_time, EIDONotActive);
+        assert!(current_time <= ido.end_time, EIDOExpired);
         assert!(coin::value(payment) >= amount, EInsufficientFunds);
 
         let paid = coin::split(payment, amount, ctx);
-        balance::join(&mut ico.balance, coin::into_balance(paid));
+        balance::join(&mut ido.balance, coin::into_balance(paid));
 
-        if(!table::contains(&ico.contributions, sender)) {
-            ico.total_contributors = ico.total_contributors + 1;
+        if(!table::contains(&ido.contributions, sender)) {
+            ido.total_contributors = ido.total_contributors + 1;
         };
 
         
 
-        if (table::contains(&ico.contributions, sender)) {
-            let existing = table::remove(&mut ico.contributions, sender);
+        if (table::contains(&ido.contributions, sender)) {
+            let existing = table::remove(&mut ido.contributions, sender);
 
             amount = amount + existing;
         };
-        table::add(&mut ico.contributions, sender, amount);
+        table::add(&mut ido.contributions, sender, amount);
 
         event::emit(Contributed {
-            ico_id: object::id(ico),
+            ido_id: object::id(ido),
             contributor: sender,
             amount,
         });
@@ -269,9 +265,9 @@ module sui_den::real_estate_ico{
          // Create and transfer NFT
         let nft = PropertyNFT {
             id: object::new(ctx),
-            name: ico.title,
+            name: ido.title,
             contribution_amount: amount,
-            ico_id: object::id(ico),
+            ido_id: object::id(ido),
         };
         transfer::transfer(nft, sender);
 
@@ -280,117 +276,116 @@ module sui_den::real_estate_ico{
         
     }
 
-    public entry fun buy_non_fractional(ico: &mut PropertyICO, payment: &mut Coin<SUI>, clock: &Clock, ctx: &mut TxContext){
-        assert!(!ico.is_fractional, EFractionalNotAllowed);
-        assert!(ico.total_contributors == 0, EAlreadySold);
+    public entry fun buy_non_fractional(ido: &mut PropertyIDO, payment: &mut Coin<SUI>, clock: &Clock, ctx: &mut TxContext){
+        assert!(!ido.is_fractional, EFractionalNotAllowed);
+        assert!(ido.total_contributors == 0, EAlreadySold);
 
         let sender = tx_context::sender(ctx);
         let current_time = clock::timestamp_ms(clock);
 
-        assert!(current_time >= ico.start_time, EICONotActive);
-        assert!(current_time <= ico.end_time, EICOExpired);
-        assert!(coin::value(payment) >= ico.total_value, EInsufficientFunds);
+        assert!(current_time >= ido.start_time, EIDONotActive);
+        assert!(current_time <= ido.end_time, EIDOExpired);
+        assert!(coin::value(payment) >= ido.total_value, EInsufficientFunds);
 
-        let paid = coin::split(payment, ico.total_value, ctx);
-        balance::join(&mut ico.balance, coin::into_balance(paid));
+        let paid = coin::split(payment, ido.total_value, ctx);
+        balance::join(&mut ido.balance, coin::into_balance(paid));
 
-        ico.total_contributors = 1;
-        table::add(&mut ico.contributions, sender, ico.total_value);
+        ido.total_contributors = 1;
+        table::add(&mut ido.contributions, sender, ido.total_value);
 
-             event::emit(Contributed {
-            ico_id: object::id(ico),
+            event::emit(Contributed {
+            ido_id: object::id(ido),
             contributor: sender,
-            amount: ico.total_value,
+            amount: ido.total_value,
         });
 
         // Create and transfer NFT
         let nft = PropertyNFT {
             id: object::new(ctx),
-            name: ico.title,
-            contribution_amount: ico.total_value,
-            ico_id: object::id(ico),
+            name: ido.title,
+            contribution_amount: ido.total_value,
+            ido_id: object::id(ido),
         };
         transfer::transfer(nft, sender);
 
     }
 
 
-    public entry fun complete_ico(ico: &mut PropertyICO, ctx: &mut TxContext){
-            assert!(tx_context::sender(ctx) == ico.developer, ENotAuthorized);
-            let total_raised = balance::value(&ico.balance);
-            let funds = coin::from_balance(balance::withdraw_all(&mut ico.balance), ctx);
+    public entry fun complete_ico(ido: &mut PropertyIDO, ctx: &mut TxContext){
+            assert!(tx_context::sender(ctx) == ido.developer, ENotAuthorized);
+            let total_raised = balance::value(&ido.balance);
+            let funds = coin::from_balance(balance::withdraw_all(&mut ido.balance), ctx);
 
-            transfer::public_transfer(funds, ico.developer);
+            transfer::public_transfer(funds, ido.developer);
 
-            event::emit(ICOComplted {
-                ico_id: object::id(ico),
+            event::emit(IDOComplted {
+                ido_id: object::id(ido),
                 total_raised,
-                total_contributors: ico.total_contributors,
+                total_contributors: ido.total_contributors,
             });
     }
 
-public entry fun buy_property(ico: &mut PropertyICO, payment: &mut Coin<SUI>, clock: &Clock, ctx: &mut TxContext) {
+public entry fun buy_property(ido: &mut PropertyIDO, payment: &mut Coin<SUI>, clock: &Clock, ctx: &mut TxContext) {
     let buyer = tx_context::sender(ctx);
     let current_time = clock::timestamp_ms(clock);
 
-    assert!(current_time > ico.end_time, EICONotCompleted);
-    assert!(buyer != ico.developer, EAlreadyOwner);
+    assert!(current_time > ido.end_time, EIDONotCompleted);
+    assert!(buyer != ido.developer, EAlreadyOwner);
 
-    let total_raised = balance::value(&ico.balance);
+    let total_raised = balance::value(&ido.balance);
     let new_value = coin::value(payment);
 
     assert!(new_value > total_raised, EInsufficientFunds);
 
     let paid = coin::split(payment, new_value, ctx);
-    balance::join(&mut ico.balance, coin::into_balance(paid));
+    balance::join(&mut ido.balance, coin::into_balance(paid));
 
     // Distribute returns to contributors
     let mut i = 0;
-    let len = vector::length(&ico.contributors);
+    let len = vector::length(&ido.contributors);
     while (i < len) {
-        let contributor = *vector::borrow(&ico.contributors, i);
+        let contributor = *vector::borrow(&ido.contributors, i);
         if (contributor != buyer) {
-            let contribution = *table::borrow(&ico.contributions, contributor);
-            let return_amount = calculate_returns(ico, new_value, contributor);
-            let return_coin = coin::take(&mut ico.balance, return_amount, ctx);
+            let return_amount = calculate_returns(ido, new_value, contributor);
+            let return_coin = coin::take(&mut ido.balance, return_amount, ctx);
             transfer::public_transfer(return_coin, contributor);
-            table::remove(&mut ico.contributions, contributor);
+            table::remove(&mut ido.contributions, contributor);
         };
         i = i + 1;
     };
 
     // Transfer remaining balance to the original developer
   
-    let balance_value = balance::value(&ico.balance);
+    let balance_value = balance::value(&ido.balance);
 
 // Then, perform the mutable borrow
-    let developer_return = coin::take(&mut ico.balance, balance_value, ctx);
+    let developer_return = coin::take(&mut ido.balance, balance_value, ctx);
 
 // Continue with the rest of your logic
-    let old_developer = ico.developer;
+    let old_developer = ido.developer;
     transfer::public_transfer(developer_return, old_developer);
 
 
     // Transfer ownership and reset ICO state
-    ico.developer = buyer;
-    ico.total_value = new_value;
-    ico.total_contributors = 1;
+    ido.developer = buyer;
+    ido.total_value = new_value;
+    ido.total_contributors = 1;
 
     // Clear contributions and add new buyer
-    while (!vector::is_empty(&ico.contributors)) {
-        let contributor = vector::pop_back(&mut ico.contributors);
-        if (table::contains(&ico.contributions, contributor)) {
-            table::remove(&mut ico.contributions, contributor);
+    while (!vector::is_empty(&ido.contributors)) {
+        let contributor = vector::pop_back(&mut ido.contributors);
+        if (table::contains(&ido.contributions, contributor)) {
+            table::remove(&mut ido.contributions, contributor);
         };
     };
-    table::add(&mut ico.contributions, buyer, new_value);
+    table::add(&mut ido.contributions, buyer, new_value);
 
     // Reset contributors vector
-    vector::push_back(&mut ico.contributors, buyer);
+    vector::push_back(&mut ido.contributors, buyer);
 
     // Emit an event for the property sale
     event::emit(PropertySold {
-        ico_id: object::uid_to_inner(&ico.id),
+        ido_id: object::uid_to_inner(&ido.id),
         old_owner: old_developer,
         new_owner: buyer,
         sale_price: new_value,
@@ -398,37 +393,37 @@ public entry fun buy_property(ico: &mut PropertyICO, payment: &mut Coin<SUI>, cl
 }
     // View functions
 
-    public fun calculate_returns(ico: &PropertyICO, new_value: u64, investor: address): u64 {
-        let contribution = get_contribution(ico, investor);
+    public fun calculate_returns(ido: &PropertyIDO, new_value: u64, investor: address): u64 {
+        let contribution = get_contribution(ido, investor);
 
-        let total_raised = balance::value(&ico.balance);
-        let appreciation = new_value - ico.total_value;
+        let total_raised = balance::value(&ido.balance);
+        let appreciation = new_value - ido.total_value;
         let investor_share = (contribution as u128) * ((appreciation as u128) / (total_raised as u128));
 
         (investor_share as u64) + contribution
 
     }
-    public fun get_ico_info(ico: &PropertyICO): (String, String, String, String, u64){
+    public fun get_ido_info(ido: &PropertyIDO): (String, String, String, String, u64){
         (
-            ico.title,
-            ico.image,
-            ico.location,
-            ico.description,
-            ico.total_value,
+            ido.title,
+            ido.image,
+            ido.location,
+            ido.description,
+            ido.total_value,
 
         )
     }
 
-    public fun get_contribution(ico: &PropertyICO, investor: address): u64 {
-        if(table::contains(&ico.contributions, investor)) {
-            *table::borrow(&ico.contributions, investor)
+    public fun get_contribution(ido: &PropertyIDO, investor: address): u64 {
+        if(table::contains(&ido.contributions, investor)) {
+            *table::borrow(&ido.contributions, investor)
         } else {
             0
         }
     }
 
-    public fun get_all_icos(registry: &ICORegistry): vector<ID> {
-        vec_set::into_keys(registry.icos)
+    public fun get_all_idos(registry: &IDORegistry): vector<ID> {
+        vec_set::into_keys(registry.idos)
     }
 
 }
