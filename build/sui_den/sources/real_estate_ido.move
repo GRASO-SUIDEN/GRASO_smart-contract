@@ -1,12 +1,13 @@
 module sui_den::real_estate_ido{
     use sui::table::{Self, Table};
-    use std::string::{String};
+    use std::string::{String, utf8};
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
     use sui::balance::{Self, Balance};
     use sui::clock::{Self, Clock};
     use sui::event;
     use sui::vec_set::{Self, VecSet};
+    use std::vector;
 
     // Error codes 
     const EInsufficientFunds: u64 = 0;
@@ -130,11 +131,11 @@ module sui_den::real_estate_ido{
 
     public entry fun create_profile(
         manager: &mut UserProfileManager,
-        first_name: String,
-        last_name: String,
-        email: String,
-        occupation: String,
-        description: String,
+        first_name: vector<u8>,
+        last_name: vector<u8>,
+        email: vector<u8>,
+        occupation: vector<u8>,
+        description: vector<u8>,
         is_developer: bool,
         ctx: &mut TxContext
     ) {
@@ -142,11 +143,11 @@ module sui_den::real_estate_ido{
         let sender = tx_context::sender(ctx);
         let profile = UserProfile {
             id: object::new(ctx),
-            first_name,
-            last_name,
-            email,
-            occupation,
-            description,
+            first_name: utf8(first_name),
+            last_name: utf8(last_name),
+            email: utf8(email),
+            occupation: utf8(occupation),
+            description: utf8(description),
             is_developer,
         };
         
