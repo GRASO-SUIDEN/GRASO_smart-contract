@@ -1,9 +1,10 @@
 module sui_den::real_estate_ido{
     use std::string::String;
     use sui::clock::{Clock};
-    use sui::coin::{Self, Coin};
+    use sui::coin::{Self, Coin, TreasuryCap};
     use sui::sui::SUI;
     use sui::balance::{Self, Balance};
+    use sui_den::graso_token::{mint, GRASO_TOKEN};
 
     // Error codes 
     const EINVALID: u64 = 0;
@@ -79,7 +80,7 @@ public struct Contributor has store, drop, copy {
     }
 
         public fun contribute(property: &mut PropertyIDO,   payment: Coin<SUI>,
-        clock: &Clock, ctx: &mut TxContext ){
+        clock: &Clock, ctx: &mut TxContext, treasury_cap: &mut TreasuryCap<GRASO_TOKEN> ){
         
         let sender = tx_context::sender(ctx);
         let amount = coin::value(&payment);
@@ -93,6 +94,8 @@ public struct Contributor has store, drop, copy {
 
         vector::push_back(&mut property.contributors, contributor);
 
+
+         mint(treasury_cap, amount/100, sender, ctx);
 
         let payment_balance = coin::into_balance(payment);
         property.current_amount = property.current_amount + amount;
