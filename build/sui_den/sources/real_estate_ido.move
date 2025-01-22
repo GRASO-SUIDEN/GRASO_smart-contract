@@ -80,7 +80,7 @@ public struct Contributor has store, drop, copy {
     }
 
         public fun contribute(property: &mut PropertyIDO,   payment: Coin<SUI>,
-        clock: &Clock, ctx: &mut TxContext, treasury_cap: &mut TreasuryCap<GRASO_TOKEN> ){
+        clock: &Clock, treasury_cap: &mut TreasuryCap<GRASO_TOKEN>, ctx: &mut TxContext ){
         
         let sender = tx_context::sender(ctx);
         let amount = coin::value(&payment);

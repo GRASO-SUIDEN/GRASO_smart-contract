@@ -13,7 +13,7 @@ fun init(witness: GRASO_TOKEN, ctx: &mut TxContext) {
 				b"GRS",
 				b"Graso",
 				b"Token for investing",
-				option::some(url::new_unsafe_from_bytes(b"https://gateway.pinata.cloud/ipfs/bafkreihsdevgcwooajwauvce6lnovpms4nhou4vflk6zrm2gcan6ldhwyi")),
+				option::some(url::new_unsafe_from_bytes(b"https://gateway.pinata.cloud/ipfs/bafkreif5h7ct7wy57qdejrt6skrvrkznngtz743rdswvfumvhnblwzmevm")),
 				ctx,
 		);
 		transfer::public_freeze_object(metadata);
